@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Kesi Ledger',
+  title: 'c0ff33 Leger',
   description: 'Personal finance tracker with smart categorization.',
 };
 

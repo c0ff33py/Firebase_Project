@@ -60,7 +60,7 @@ export default function HomePage() {
           </div>
         </main>
          <footer className="py-6 text-center text-muted-foreground border-t border-border mt-auto">
-          <p>&copy; {new Date().getFullYear()} Kesi Ledger. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} c0ff33 Leger. All rights reserved.</p>
         </footer>
       </div>
     );
@@ -73,11 +73,11 @@ export default function HomePage() {
         <AppHeader />
         <main className="flex-grow container mx-auto px-4 py-8">
            <div className="flex items-center justify-center h-64">
-            <p className="text-xl text-muted-foreground">Initializing Kesi Ledger...</p>
+            <p className="text-xl text-muted-foreground">Initializing c0ff33 Leger...</p>
           </div>
         </main>
          <footer className="py-6 text-center text-muted-foreground border-t border-border mt-auto">
-          <p>&copy; {new Date().getFullYear()} Kesi Ledger. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} c0ff33 Leger. All rights reserved.</p>
         </footer>
       </div>
     );
@@ -103,7 +103,7 @@ export default function HomePage() {
         </div>
       </main>
       <footer className="py-6 text-center text-muted-foreground border-t border-border mt-auto">
-        <p>&copy; {new Date().getFullYear()} Kesi Ledger. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} c0ff33 Leger. All rights reserved.</p>
       </footer>
     </div>
   );

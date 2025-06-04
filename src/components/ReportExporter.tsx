@@ -57,7 +57,7 @@ export function ReportExporter({ transactions }: ReportExporterProps) {
       // doc.setFont('PT Sans', 'normal'); // May require font files or specific jsPDF setup
 
       doc.setFontSize(18);
-      doc.text('Kesi Ledger - Transaction Report', 14, 22);
+      doc.text('c0ff33 Leger - Transaction Report', 14, 22);
       doc.setFontSize(11);
       doc.setTextColor(100); // Gray color for subtitle
       doc.text(`Report for: ${format(dateRange.from, 'PPP')} - ${format(dateRange.to, 'PPP')}`, 14, 30);
@@ -96,7 +96,7 @@ export function ReportExporter({ transactions }: ReportExporterProps) {
         }
       });
       
-      doc.save(`Kesi_Ledger_Report_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.pdf`);
+      doc.save(`c0ff33_Leger_Report_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to, 'yyyyMMdd')}.pdf`);
       toast({ title: 'Success', description: 'Report generated and download started.' });
 
     } catch (error) {
