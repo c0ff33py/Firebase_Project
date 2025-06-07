@@ -7,18 +7,27 @@ interface BalanceSummaryProps {
 }
 
 export function BalanceSummary({ transactions }: BalanceSummaryProps) {
-  const totalIncome = transactions
+  const totalIncomeGross = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
+  
+  const totalExpensesGross = transactions
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
-  const balance = totalIncome - totalExpenses;
+
+  const totalServiceFeesOnIncome = transactions
+    .filter((t) => t.type === 'income' && t.serviceFee)
+    .reduce((sum, t) => sum + (t.serviceFee || 0), 0);
+
+  const totalServiceFeesOnExpenses = transactions
+    .filter((t) => t.type === 'expense' && t.serviceFee)
+    .reduce((sum, t) => sum + (t.serviceFee || 0), 0);
+  
+  const netIncome = totalIncomeGross - totalServiceFeesOnIncome;
+  const totalEffectiveExpenses = totalExpensesGross + totalServiceFeesOnExpenses;
+  const balance = netIncome - totalEffectiveExpenses;
 
   const formatCurrency = (amount: number) => {
-    // Using a placeholder currency, adjust as needed for Kesi or local currency.
-    // For example, 'MMK' for Myanmar Kyat if Kesi is a name and not currency.
-    // For now, using a generic style without currency symbol for broader applicability.
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
   };
 
@@ -29,13 +38,27 @@ export function BalanceSummary({ transactions }: BalanceSummaryProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex justify-between items-center p-3 bg-secondary/30 rounded-md">
-          <span className="text-lg">Total Income:</span>
-          <span className="text-lg font-semibold text-accent">{formatCurrency(totalIncome)}</span>
+          <span className="text-lg">Net Income:</span>
+          <span className="text-lg font-semibold text-accent">{formatCurrency(netIncome)}</span>
         </div>
         <div className="flex justify-between items-center p-3 bg-secondary/30 rounded-md">
-          <span className="text-lg">Total Expenses:</span>
-          <span className="text-lg font-semibold text-destructive">{formatCurrency(totalExpenses)}</span>
+          <span className="text-lg">Total Effective Expenses:</span>
+          <span className="text-lg font-semibold text-destructive">{formatCurrency(totalEffectiveExpenses)}</span>
         </div>
+         { (totalServiceFeesOnIncome > 0 || totalServiceFeesOnExpenses > 0) && (
+          <div className="text-xs text-muted-foreground space-y-1 pt-2">
+            {totalServiceFeesOnIncome > 0 && (
+              <div className="flex justify-between items-center">
+                <span>(Gross Income: {formatCurrency(totalIncomeGross)}, Fees: {formatCurrency(totalServiceFeesOnIncome)})</span>
+              </div>
+            )}
+            {totalServiceFeesOnExpenses > 0 && (
+               <div className="flex justify-between items-center">
+                <span>(Gross Expenses: {formatCurrency(totalExpensesGross)}, Fees: {formatCurrency(totalServiceFeesOnExpenses)})</span>
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex justify-between items-center p-3 bg-card border border-border rounded-md mt-4">
           <span className="text-xl font-bold">Current Balance:</span>
           <span

@@ -18,7 +18,6 @@ interface ReportExporterProps {
   transactions: Transaction[];
 }
 
-// Extend jsPDF with autoTable - this is a common way to type it for jspdf-autotable
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
@@ -31,6 +30,13 @@ export function ReportExporter({ transactions }: ReportExporterProps) {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
+
+  const getEffectiveAmount = (t: Transaction) => {
+    if (t.type === 'income') {
+      return t.amount - (t.serviceFee || 0);
+    }
+    return t.amount + (t.serviceFee || 0);
+  };
 
   const handleExport = () => {
     if (!dateRange.from || !isValid(dateRange.from) || !dateRange.to || !isValid(dateRange.to)) {
@@ -51,30 +57,27 @@ export function ReportExporter({ transactions }: ReportExporterProps) {
     try {
       const doc = new jsPDF();
       
-      // It's good practice to embed fonts if PT Sans is crucial for the PDF look
-      // For simplicity, we'll rely on system fonts or jsPDF defaults.
-      // If PT Sans is available as a standard font in jsPDF or if you load it, set it:
-      // doc.setFont('PT Sans', 'normal'); // May require font files or specific jsPDF setup
-
       doc.setFontSize(18);
       doc.text('c0ff33 Leger - Transaction Report', 14, 22);
       doc.setFontSize(11);
-      doc.setTextColor(100); // Gray color for subtitle
+      doc.setTextColor(100);
       doc.text(`Report for: ${format(dateRange.from, 'PPP')} - ${format(dateRange.to, 'PPP')}`, 14, 30);
 
-      const tableColumn = ["Date", "Type", "Description", "Category", "Name", "Phone", "Method", "Amount"];
+      const tableColumn = ["Date", "Type", "Description", "Category", "Name", "Phone", "Method", "Amount", "Service Fee", "Net/Total"];
       const tableRows: any[][] = [];
 
       filteredTransactions.forEach(tx => {
         const transactionData = [
-          format(new Date(tx.date), 'yyyy-MM-dd'), // Ensure date is correctly formatted
+          format(new Date(tx.date), 'yyyy-MM-dd'),
           tx.type,
           tx.description,
           tx.category,
           tx.name,
           tx.phoneNumber,
           tx.paymentMethod,
-          `${tx.type === 'expense' ? '-' : ''}${tx.amount.toFixed(2)}`
+          tx.amount.toFixed(2),
+          (tx.serviceFee || 0).toFixed(2),
+          getEffectiveAmount(tx).toFixed(2)
         ];
         tableRows.push(transactionData);
       });
@@ -85,14 +88,16 @@ export function ReportExporter({ transactions }: ReportExporterProps) {
         startY: 35,
         theme: 'striped', 
         headStyles: { 
-          fillColor: [204, 0, 0], // Red HSL(0, 80%, 40%) approx
+          fillColor: [204, 0, 0], 
           textColor: [255, 255, 255] 
         },
-        styles: { cellPadding: 2, fontSize: 8 },
+        styles: { cellPadding: 1.5, fontSize: 7 },
         columnStyles: {
-          0: { cellWidth: 25 }, // Date
-          2: { cellWidth: 40 }, // Description
-          7: { halign: 'right' } // Amount
+          0: { cellWidth: 18 }, // Date
+          2: { cellWidth: 30 }, // Description
+          7: { halign: 'right', cellWidth: 15 }, // Amount
+          8: { halign: 'right', cellWidth: 15 }, // Service Fee
+          9: { halign: 'right', cellWidth: 18 }  // Net/Total
         }
       });
       

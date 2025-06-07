@@ -11,4 +11,5 @@ export interface Transaction {
   name: string;
   phoneNumber: string;
   paymentMethod: PaymentMethod;
+  serviceFee?: number; // Added serviceFee field
 }

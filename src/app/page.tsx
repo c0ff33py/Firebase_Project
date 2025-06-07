@@ -7,6 +7,7 @@ import { BalanceSummary } from '@/components/BalanceSummary';
 import { TransactionForm } from '@/components/TransactionForm';
 import { TransactionList } from '@/components/TransactionList';
 import { ReportExporter } from '@/components/ReportExporter';
+import { ServiceFeeSettings } from '@/components/ServiceFeeSettings'; // Added import
 import { loadTransactions, saveTransactions } from '@/lib/localStorageHelper';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -50,6 +51,7 @@ export default function HomePage() {
         <main className="flex-grow container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1 space-y-8">
+              <Skeleton className="h-[150px] w-full rounded-lg" /> {/* Adjusted for ServiceFeeSettings */}
               <Skeleton className="h-[200px] w-full rounded-lg" />
               <Skeleton className="h-[600px] w-full rounded-lg" />
             </div>
@@ -66,7 +68,6 @@ export default function HomePage() {
     );
   }
   
-  // Fallback for SSR or if window is not defined yet, can be an empty state or minimal loader
   if (typeof window === 'undefined') {
      return (
       <div className="flex flex-col min-h-screen">
@@ -91,6 +92,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           {/* Left Column: Form and Balance */}
           <div className="md:col-span-1 space-y-8 flex flex-col">
+            <ServiceFeeSettings /> {/* Added ServiceFeeSettings component */}
             <BalanceSummary transactions={transactions} />
             <TransactionForm onAddTransaction={handleAddTransaction} animateTrigger={setAnimatedRowId} />
           </div>

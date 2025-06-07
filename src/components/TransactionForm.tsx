@@ -1,6 +1,6 @@
 'use client';
 
-import type { Transaction, PaymentMethod, TransactionType } from '@/types';
+import type { Transaction } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -14,10 +14,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { categorizeTransaction } from '@/ai/flows/categorize-transaction';
-import { CalendarIcon, SparklesIcon, Loader2 } from 'lucide-react';
+import { loadServiceFeeRate } from '@/lib/localStorageHelper'; // Added import
+import { CalendarIcon, SparklesIcon, Loader2, InfoIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const transactionFormSchema = z.object({
   date: z.date({ required_error: 'Date is required.' }),
@@ -41,6 +42,8 @@ export function TransactionForm({ onAddTransaction, animateTrigger }: Transactio
   const { toast } = useToast();
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [descriptionForCategory, setDescriptionForCategory] = useState('');
+  const [currentServiceFeeRate, setCurrentServiceFeeRate] = useState(0);
+  const [calculatedServiceFee, setCalculatedServiceFee] = useState(0);
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionFormSchema),
@@ -56,9 +59,40 @@ export function TransactionForm({ onAddTransaction, animateTrigger }: Transactio
   });
 
   const watchDescription = form.watch('description');
+  const watchAmount = form.watch('amount');
+
+  const refreshFeeRate = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentServiceFeeRate(loadServiceFeeRate());
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshFeeRate();
+     // Add event listener for localStorage changes to fee rate
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'kesiLedgerServiceFeeRate') {
+        refreshFeeRate();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [refreshFeeRate]);
+
   useEffect(() => {
     setDescriptionForCategory(watchDescription);
   }, [watchDescription]);
+
+  useEffect(() => {
+    if (watchAmount > 0 && currentServiceFeeRate > 0) {
+      const fee = (watchAmount * currentServiceFeeRate) / 100;
+      setCalculatedServiceFee(parseFloat(fee.toFixed(2)));
+    } else {
+      setCalculatedServiceFee(0);
+    }
+  }, [watchAmount, currentServiceFeeRate]);
 
   const handleSuggestCategory = async () => {
     if (!descriptionForCategory) {
@@ -82,10 +116,11 @@ export function TransactionForm({ onAddTransaction, animateTrigger }: Transactio
     const newTransaction: Transaction = {
       id: crypto.randomUUID(),
       ...data,
+      serviceFee: calculatedServiceFee > 0 ? calculatedServiceFee : undefined,
     };
     onAddTransaction(newTransaction);
-    animateTrigger(newTransaction.id); // Trigger animation for this new row
-    form.reset({ // Reset form to default values
+    animateTrigger(newTransaction.id);
+    form.reset({
       date: new Date(),
       type: 'expense',
       paymentMethod: 'KPay',
@@ -93,9 +128,14 @@ export function TransactionForm({ onAddTransaction, animateTrigger }: Transactio
       category: '',
       name: '',
       phoneNumber: '',
-      amount: undefined // Explicitly reset amount if it's not clearing
+      amount: undefined,
     });
+    setCalculatedServiceFee(0); // Reset calculated fee display
     toast({ title: 'Success', description: `${data.type === 'income' ? 'Income' : 'Expense'} added successfully.`});
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   };
 
   return (
@@ -143,10 +183,36 @@ export function TransactionForm({ onAddTransaction, animateTrigger }: Transactio
             {/* Amount */}
             <div className="space-y-2">
               <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" type="number" step="0.01" {...form.register('amount')} placeholder="0.00" />
+              <Input id="amount" type="number" step="0.01" {...form.register('amount')} placeholder="0.00" onChange={(e) => {
+                form.setValue('amount', parseFloat(e.target.value) || 0);
+                refreshFeeRate(); // Re-check fee rate in case it changed in another tab
+              }}/>
               {form.formState.errors.amount && <p className="text-sm text-destructive">{form.formState.errors.amount.message}</p>}
             </div>
           </div>
+           {/* Service Fee Display */}
+           {calculatedServiceFee > 0 && (
+            <div className="p-3 bg-muted/50 rounded-md text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center">
+                  <InfoIcon className="h-4 w-4 mr-2 text-blue-500" />
+                  Service Fee ({currentServiceFeeRate}%):
+                </span>
+                <span className="font-medium">{formatCurrency(calculatedServiceFee)}</span>
+              </div>
+              <div className="flex justify-between items-center mt-1">
+                 <span className="text-muted-foreground">
+                  {form.getValues('type') === 'income' ? 'Net Amount Receivable:' : 'Total Amount Payable:'}
+                </span>
+                <span className="font-semibold">
+                  {form.getValues('type') === 'income'
+                    ? formatCurrency(form.getValues('amount') - calculatedServiceFee)
+                    : formatCurrency(form.getValues('amount') + calculatedServiceFee)}
+                </span>
+              </div>
+            </div>
+          )}
+
 
           {/* Description */}
           <div className="space-y-2">
@@ -192,7 +258,14 @@ export function TransactionForm({ onAddTransaction, animateTrigger }: Transactio
                 control={form.control}
                 render={({ field }) => (
                   <RadioGroup
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      // Trigger re-calculation of displayed net/total amount if type changes
+                      if (watchAmount > 0 && currentServiceFeeRate > 0) {
+                        const fee = (watchAmount * currentServiceFeeRate) / 100;
+                        setCalculatedServiceFee(parseFloat(fee.toFixed(2)));
+                      }
+                    }}
                     defaultValue={field.value}
                     className="flex space-x-4 pt-2"
                   >

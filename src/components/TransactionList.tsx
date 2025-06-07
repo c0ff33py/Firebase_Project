@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { TrendingUp, TrendingDown, CreditCard, Smartphone } from 'lucide-react';
+import { TrendingUp, TrendingDown, CreditCard, Smartphone, CircleDollarSign } from 'lucide-react';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -32,7 +32,8 @@ export function TransactionList({ transactions, animatedRowId }: TransactionList
     );
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (typeof amount === 'undefined') return '-';
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
   };
 
@@ -40,6 +41,13 @@ export function TransactionList({ transactions, animatedRowId }: TransactionList
     if (method === 'KPay') return <CreditCard className="h-5 w-5 inline-block mr-1 text-muted-foreground" aria-label="KPay" />;
     if (method === 'WaveMoney') return <Smartphone className="h-5 w-5 inline-block mr-1 text-muted-foreground" aria-label="WaveMoney" />;
     return null;
+  };
+
+  const getEffectiveAmount = (t: Transaction) => {
+    if (t.type === 'income') {
+      return t.amount - (t.serviceFee || 0);
+    }
+    return t.amount + (t.serviceFee || 0);
   };
 
   return (
@@ -52,14 +60,16 @@ export function TransactionList({ transactions, animatedRowId }: TransactionList
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px]">Date</TableHead>
+                <TableHead className="w-[90px]">Date</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead className="min-w-[150px]">Description</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
+                {/* <TableHead>Phone</TableHead> */}
                 <TableHead>Method</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Fee</TableHead>
+                <TableHead className="text-right">Net/Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -74,26 +84,28 @@ export function TransactionList({ transactions, animatedRowId }: TransactionList
                     {t.type === 'income' ? 
                       <TrendingUp className="h-5 w-5 mr-1 text-accent" /> : 
                       <TrendingDown className="h-5 w-5 mr-1 text-destructive" />}
-                    <span className="capitalize">{t.type}</span>
+                    <span className="capitalize text-xs sm:text-sm">{t.type}</span>
                     </div>
                   </TableCell>
                   <TableCell className="font-medium max-w-[150px] truncate" title={t.description}>{t.description}</TableCell>
                   <TableCell className="max-w-[100px] truncate" title={t.category}>{t.category}</TableCell>
                   <TableCell className="max-w-[100px] truncate" title={t.name}>{t.name}</TableCell>
-                  <TableCell className="max-w-[120px] truncate" title={t.phoneNumber}>{t.phoneNumber}</TableCell>
+                  {/* <TableCell className="max-w-[120px] truncate" title={t.phoneNumber}>{t.phoneNumber}</TableCell> */}
                   <TableCell>
-                    <div className="flex items-center">
+                    <div className="flex items-center text-xs sm:text-sm">
                       <PaymentMethodIcon method={t.paymentMethod} />
                       {t.paymentMethod}
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">{formatCurrency(t.amount)}</TableCell>
+                  <TableCell className="text-right text-xs text-muted-foreground">{formatCurrency(t.serviceFee)}</TableCell>
                   <TableCell
                     className={cn(
                       'text-right font-semibold',
                       t.type === 'income' ? 'text-accent' : 'text-destructive'
                     )}
                   >
-                    {formatCurrency(t.amount)}
+                    {formatCurrency(getEffectiveAmount(t))}
                   </TableCell>
                 </TableRow>
               ))}
